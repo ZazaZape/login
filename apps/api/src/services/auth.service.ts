@@ -91,6 +91,7 @@ export class AuthService {
     });
 
     const authResponse: AuthResponse = {
+      accessToken,
       user: {
         usuario_id: user.usuario_id,
         usuario: user.usuario,
@@ -161,6 +162,7 @@ export class AuthService {
     });
 
     const authResponse: AuthResponse = {
+      accessToken,
       user: {
         usuario_id: userWithRole.usuario_id,
         usuario: userWithRole.usuario,

@@ -30,6 +30,7 @@ export type CheckUsernameDto = z.infer<typeof checkUsernameSchema>;
 
 // Response Types
 export interface AuthResponse {
+  accessToken: string;
   user: UserProfile;
   roleId: number;
   defaultModule: Module;

@@ -30,6 +30,16 @@ export default function AuthPage() {
       const data = await response.json();
 
       if (response.ok && data.ok) {
+        // Store the access token
+        if (data.data.accessToken) {
+          localStorage.setItem("accessToken", data.data.accessToken);
+        }
+        
+        // Store user data
+        if (data.data.user) {
+          localStorage.setItem("user", JSON.stringify(data.data.user));
+        }
+        
         // Redirect to homepage on success
         window.location.href = "/";
       } else {

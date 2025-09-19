@@ -28,7 +28,10 @@ export class RbacRepository {
         eq(rol_usuario.rol, rol_modulo.rol_id),
         eq(rol_usuario.rol_usuario_habilitado, true)
       ))
-      .where(eq(rol_usuario.usuario, userId))
+      .where(and(
+        eq(rol_usuario.usuario, userId),
+        eq(modulos.modulo_habilitado, true) // Security: Only enabled modules as default
+      ))
       .limit(1);
 
     if (!result[0]) return null;
@@ -56,7 +59,7 @@ export class RbacRepository {
         modulo_default: rol_modulo.modulo_default,
         permiso_id: permisos.permiso_id,
         permiso_descripcion: permisos.permiso_descripcion,
-        permiso_habilitado: rol_modulo_permiso.rol_modulo_permiso_habilita,
+        permiso_habilitado: rol_modulo_permiso.rol_modulo_permiso_habilitado,
       })
       .from(modulos)
       .innerJoin(rol_modulo, and(
@@ -71,7 +74,10 @@ export class RbacRepository {
         eq(rol_modulo_permiso.modulo_id, modulos.modulo_id),
         eq(rol_modulo_permiso.rol_id, rol_usuario.rol)
       ))
-      .leftJoin(permisos, eq(permisos.permiso_id, rol_modulo_permiso.permiso_id))
+      .leftJoin(permisos, and(
+        eq(permisos.permiso_id, rol_modulo_permiso.permiso_id),
+        eq(permisos.permiso_habilitado, true) // Security: Only enabled permissions in menu
+      ))
       .where(and(
         eq(rol_usuario.usuario, userId),
         eq(modulos.modulo_habilitado, true)
@@ -96,7 +102,7 @@ export class RbacRepository {
 
       const module = moduleMap.get(moduleId)!;
       
-      if (row.permiso_id) {
+      if (row.permiso_id && row.permiso_habilitado) {
         module.permisos.push({
           permiso_id: row.permiso_id,
           descripcion: row.permiso_descripcion || "",
@@ -113,24 +119,35 @@ export class RbacRepository {
   async getUserPermissions(userId: number): Promise<string[]> {
     const result = await db
       .select({
+        permiso_key: permisos.permiso_key,
+        modulo_key: modulos.modulo_key,
         permiso_descripcion: permisos.permiso_descripcion,
         modulo_descripcion: modulos.modulo_descripcion,
       })
       .from(permisos)
       .innerJoin(rol_modulo_permiso, and(
         eq(rol_modulo_permiso.permiso_id, permisos.permiso_id),
-        eq(rol_modulo_permiso.rol_modulo_permiso_habilita, true)
+        eq(rol_modulo_permiso.rol_modulo_permiso_habilitado, true)
       ))
-      .innerJoin(modulos, eq(modulos.modulo_id, rol_modulo_permiso.modulo_id))
+      .innerJoin(modulos, and(
+        eq(modulos.modulo_id, rol_modulo_permiso.modulo_id),
+        eq(modulos.modulo_habilitado, true) // Security: Only enabled modules
+      ))
       .innerJoin(rol_usuario, and(
         eq(rol_usuario.rol, rol_modulo_permiso.rol_id),
         eq(rol_usuario.rol_usuario_habilitado, true)
       ))
-      .where(eq(rol_usuario.usuario, userId));
+      .where(and(
+        eq(rol_usuario.usuario, userId),
+        eq(permisos.permiso_habilitado, true) // Security: Only enabled permissions
+      ));
 
-    return result.map(row => 
-      `${row.modulo_descripcion.toLowerCase()}.${row.permiso_descripcion.toLowerCase()}`
-    );
+    return result.map(row => {
+      // Use canonical keys if available, fallback to normalized descriptions
+      const moduloKey = row.modulo_key || row.modulo_descripcion.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const permisoKey = row.permiso_key || row.permiso_descripcion.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      return `${moduloKey}.${permisoKey}`;
+    });
   }
 
   async hasPermission(userId: number, module: string, permission: string): Promise<boolean> {

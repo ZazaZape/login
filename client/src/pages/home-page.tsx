@@ -3,9 +3,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Shield, Database, Clock, LogOut } from "lucide-react";
 
 export default function HomePage() {
-  const handleLogout = () => {
-    // Simple logout - redirect to auth page
-    window.location.href = "/auth";
+  const handleLogout = async () => {
+    try {
+      // Call logout API to revoke server-side session
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+      }
+    } catch (error) {
+      console.warn("Logout API call failed:", error);
+    } finally {
+      // Clear client-side storage
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
+      
+      // Redirect to auth page
+      window.location.href = "/auth";
+    }
   };
 
   return (

@@ -78,6 +78,7 @@ export const rol_usuario = pgTable("rol_usuario", {
 export const modulos = pgTable("modulos", {
   modulo_id: serial("modulo_id").primaryKey(),
   modulo_descripcion: varchar("modulo_descripcion", { length: 150 }).notNull(),
+  modulo_key: varchar("modulo_key", { length: 50 }),
   modulo_icono: varchar("modulo_icono", { length: 100 }),
   modulo_habilitado: boolean("modulo_habilitado").default(true).notNull(),
   modulo_padre_id: integer("modulo_padre_id"),
@@ -96,6 +97,7 @@ export const rol_modulo = pgTable("rol_modulo", {
 export const permisos = pgTable("permisos", {
   permiso_id: bigint("permiso_id", { mode: "number" }).primaryKey(),
   permiso_descripcion: varchar("permiso_descripcion", { length: 100 }).notNull(),
+  permiso_key: varchar("permiso_key", { length: 50 }),
   permiso_habilitado: boolean("permiso_habilitado").default(true).notNull(),
 });
 
@@ -104,7 +106,7 @@ export const rol_modulo_permiso = pgTable("rol_modulo_permiso", {
   modulo_id: integer("modulo_id").notNull(),
   permiso_id: bigint("permiso_id", { mode: "number" }).notNull(),
   rol_id: integer("rol_id").notNull(),
-  rol_modulo_permiso_habilita: boolean("rol_modulo_permiso_habilita").default(true).notNull(),
+  rol_modulo_permiso_habilitado: boolean("rol_modulo_permiso_habilitado").default(true).notNull(),
 });
 
 // Relations
