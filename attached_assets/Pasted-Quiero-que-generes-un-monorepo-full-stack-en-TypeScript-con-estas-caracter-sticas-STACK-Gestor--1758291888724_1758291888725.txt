@@ -1,0 +1,225 @@
+Quiero que generes un monorepo full‑stack en TypeScript con estas características:
+
+STACK
+- Gestor: pnpm workspaces (monorepo).
+- apps/web: React 18 + Vite + TypeScript + React Router v6.21 + react-hook-form + zod.
+- apps/api: Express 5 (TypeScript, ESM), jose (JWT/JWE), cookie-parser, cors, helmet, morgan, rate-limiter-flexible.
+- DB: PostgreSQL usando Drizzle ORM con introspección (drizzle-kit) para tipado de mis tablas existentes. Driver: pg. Pool con pg-pool.
+- Comparti do: packages/
+  - types: Tipos compartidos (DTOs con zod) y enums.
+  - config: utilidades (env loader con dotenv y validador zod, constantes).
+  - auth: utilidades de auth (emit/verify tokens, middlewares, RBAC helpers).
+- Calidad: eslint + prettier + vitest (web) y jest (api) + tsconfig estrictos (noImplicitAny, strictNullChecks).
+- DX: concurrently para levantar web y api; alias de paths.
+
+ENTORNO Y SECRETOS
+- NO almacenar tokens en LocalStorage ni SessionStorage.
+- Access Token de corta vida (p.ej. 15 min) en memoria (contexto de React).
+- Refresh Token en cookie httpOnly + secure + sameSite=strict con rotación y revocación por JTI guardado en tabla `sesiones`.
+- Firmar tokens con HS512 y además cifrar el Access Token con JWE (jose) usando clave simétrica (32 bytes). Variables requeridas en apps/api/.env:
+  - DATABASE_URL=postgres://william:devpass@200.29.101.43:5432/william_hermes
+  - JWT_ACCESS_SECRET=*** (mín. 64 chars)
+  - JWT_REFRESH_SECRET=*** (mín. 64 chars)
+  - JWE_ENC_KEY_BASE64=*** (clave de 32 bytes en base64)
+  - ACCESS_TOKEN_TTL_SEC=900
+  - REFRESH_TOKEN_TTL_MIN=43200
+  - CORS_ORIGIN=http://localhost:5173
+  - COOKIE_DOMAIN=localhost
+- apps/web/.env:
+  - VITE_API_URL=http://localhost:3001
+  - VITE_APP_NAME=Connectiva Hermes
+
+ARQUITECTURA DEL BACKEND (apps/api)
+Estructura de carpetas:
+- src/
+  - index.ts (bootstrap Express)
+  - server.ts (crea app, middlewares comunes: helmet, cors withCredentials, cookieParser, json, rate limiter)
+  - routes/
+    - auth.routes.ts
+    - users.routes.ts
+    - menu.routes.ts (módulos/menú por rol)
+    - roles.routes.ts (si aplica)
+  - controllers/
+    - auth.controller.ts
+    - users.controller.ts
+    - menu.controller.ts
+  - services/
+    - auth.service.ts (login, refresh, logout, rotate, revoke)
+    - session.service.ts (lógica con tablas `politicas_sesion` y `sesiones`)
+    - user.service.ts (CRUD usuarios, checkUsername)
+    - rbac.service.ts (join de rol → módulos → permisos)
+  - repositories/
+    - user.repo.ts
+    - session.repo.ts
+    - rbac.repo.ts
+  - middlewares/
+    - requireAuth.ts (verifica Access Token; carga `req.auth` con usuario, rol activo y permisos)
+    - requirePermission.ts (RBAC por módulo/permiso)
+    - errorHandler.ts
+  - db/
+    - drizzle/ (schema + migraciones generadas por introspección)
+    - client.ts (pool + drizzle instance)
+  - auth/
+    - token.ts (emit/verify access/refresh con jose; JWE para access; JTI; kid opcional)
+    - cookies.ts (set/clear cookies)
+  - types/
+  - utils/
+
+MODELO DE DATOS A RESPETAR (introspección con drizzle-kit):
+Tablas existentes (no crees nuevas): 
+- `sesiones` (con campos: sesion_id uuid (pk), usuario_id int8, rol_usuario_id int4, policy_id int4, refresh_jti varchar, refresh_token_hash varchar, created_at timestamptz default now(), last_activity timestamptz default now(), expires_at_absolute timestamptz, revoked bool default false, revoked_at timestamptz, device_info jsonb, ip varchar(45), user_agent text, persona_snapshot jsonb, meta jsonb)
+- `politicas_sesion` (politica_sesion_id int4 (pk), tiempo_inactividad_sesion int4, tiempo_expiracion_sesion int4, tiempo_refrescamiento_token int4, fecha_hora_creacion timestamptz default now(), fecha_hora_actualizacion timestamptz default now())
+- `usuarios` (usuario_id bigserial pk, individuo uuid, usuario varchar(50) unique, usuario_password varchar(255), usuario_tema varchar(20), usuario_habilitado bool, politica_sesion_id int4, usuario_access_token varchar(255) nullable, usuario_sesion_multiple bool, usuario_expirado bool, usuario_expiracion int4, session_policy_id int4)
+- `roles` (rol_id serial pk, rol_descripcion varchar(150), rol_habilitado bool default true)
+- `rol_usuario` (rol int4 fk, usuario int4 fk, rol_usuario_especial bool, rol_usuario_habilitado bool default true) → por regla de negocio un usuario puede tener MÁX 2 roles pero SOLO 1 activo.
+- `modulos` (modulo_id serial pk, modulo_descripcion varchar(150), modulo_icono varchar(100), modulo_habilitado bool, modulo_padre_id int4 nullable, modulo_ruta varchar)
+- `rol_modulo` (modulo_id int4 fk, rol_id int4 fk, rol_modulo_habilitado bool, modulo_default bool)
+- `permisos` (permiso_id int8 pk, permiso_descripcion varchar(100), permiso_habilitado bool default true)
+- `rol_modulo_permiso` (modulo_id int4 fk, permiso_id int4 fk, rol_id int4 fk, rol_modulo_permiso_habilita bool)
+
+REQUISITOS DE AUTENTICACIÓN Y SESIÓN
+- /auth/login (POST): recibe { usuario, password }.
+  1) Verifica credenciales (password con argon2).
+  2) Obtiene el rol activo del usuario (en `rol_usuario` donde rol_usuario_habilitado = true). Validar que no haya más de uno activo; si hay >1, responder 409 y forzar corrección manual o elegir rol explícitamente.
+  3) Lee la política del usuario (`politica_sesion_id` o `session_policy_id`) para calcular:
+     - inactividad: `tiempo_inactividad_sesion` (min) → si no hay actividad mayor a este valor, invalidar refresh.
+     - absoluta: `tiempo_expiracion_sesion` (min) → `expires_at_absolute`.
+     - refresco: `tiempo_refrescamiento_token` (min).
+  4) Crea una fila en `sesiones` con:
+     - sesion_id (uuid)
+     - refresh_jti random
+     - refresh_token_hash (argon2 del token)
+     - last_activity = now()
+     - expires_at_absolute = now() + absoluta
+     - policy_id = política aplicada
+     - ip, user_agent, device_info (si se envía)
+  5) Emite Access Token (JWE + HS512, 15 min) y Refresh Token (HS512) con claims:
+     - sub = usuario_id, sid = sesion_id, rid = rol_id, jti = refresh_jti.
+  6) Setea cookie httpOnly/secure/sameSite=strict con refresh; devuelve en body: perfil básico, rol activo, `defaultModule` y `menu`.
+
+- /auth/refresh (POST): requiere cookie refresh; valida:
+  - existencia de sesión no revocada, hash coincide, `last_activity` no supera inactividad, `now()<expires_at_absolute`.
+  - rota JTI y cookie (rotación obligatoria). Actualiza `last_activity`.
+
+- /auth/logout (POST): revoca la sesión (revoked=true, revoked_at=now), borra cookie.
+
+- Middleware `requireAuth`: exige Access Token en Authorization: Bearer, verifica firma y desencripta JWE, monta `req.auth = { userId, roleId, sid, permissions }`.
+
+- Seguridad adicional:
+  - CSRF: anti-CSRF por “double submit cookie” en endpoints state‑changing (header X-CSRF).
+  - Rate limit por IP/usuario en /auth/*.
+  - CORS: only `CORS_ORIGIN`, withCredentials:true.
+
+RBAC Y MENÚ DINÁMICO
+- /menu (GET, protegido): devuelve el árbol de módulos (soporta jerarquía por `modulo_padre_id`) para el ROL ACTIVO del usuario, con permisos habilitados.
+  - Query sugerida (tipificada con Drizzle): 
+    1) Seleccionar módulos habilitados del rol: join `rol_usuario` (activo) → `rol_modulo` (rol_modulo_habilitado=true) → `modulos` (modulo_habilitado=true).
+    2) Adjuntar permisos por módulo con left join a `rol_modulo_permiso` y `permisos`.
+  - En cada módulo incluir:
+    - { modulo_id, label: modulo_descripcion, path: modulo_ruta, icon: modulo_icono, isDefault: modulo_default, permisos:[{id, descripcion, habilitado}] }
+- Regla: Todo rol‑módulo tiene un permiso básico “ingresar” (ver información): id o descripción `permiso_<nombremodulo>`; crea helper `requirePermission(modulo, 'ingresar')`.
+
+- /me (GET, protegido): devuelve perfil del usuario (id, usuario, nombre si está en `individuo`), rol activo, `defaultModule` (módulo con `modulo_default=true` para ese rol) y `menu`.
+
+MÓDULO USUARIOS
+- Ruta protegida /usuarios con permiso del módulo “Usuarios”.
+- Reglas de creación:
+  1) El formulario solicita datos personales (nombre(s), primer apellido, documento…).
+  2) Generar `usuario` automáticamente: primera letra del primer nombre + primer apellido + últimos 4 dígitos del documento, en minúsculas, sin tildes ni espacios. Ejemplo de función:
+     - `buildUsername(firstName, lastName, doc) => (firstName.trim()[0] + firstLastName(lastName) + last4(doc)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')`
+  3) Mostrar el `usuario` en un campo *no editable*.
+  4) Al completar datos (onBlur / onChange debounced), llamar a `/usuarios/check-username?u=<usuario>`:
+     - Responder `{ available: true }` o 409 si existe. Mostrar mensaje claro si no disponible.
+  5) En el servidor, al crear (`POST /usuarios`), volver a validar disponibilidad de `usuario` (para evitar race conditions) y respuesta 409 si existe.
+  6) Contraseñas con `argon2id`. 
+  7) Asignación de roles: permitir máximo 2 y marcar exactamente 1 como activo. Si intentan activar más de 1, responder 400.
+
+FRONTEND (apps/web)
+- Arquitectura “feature‑sliced”:
+  - src/app/ (App, router, providers, error boundary)
+  - src/entities/ (auth, user)
+  - src/features/ (login, switchRole)
+  - src/widgets/ (Sidebar, Topbar)
+  - src/pages/
+    - Login.tsx
+    - Home.tsx (redirecciona al defaultModule tras login)
+    - Usuarios/ (listado, crear)
+- AuthContext:
+  - Guarda en memoria: `accessToken`, `user`, `roleId`, `menu`.
+  - Axios instance con `withCredentials:true` y `Authorization: Bearer <accessToken>`.
+  - Interceptor 401 → intenta `POST /auth/refresh` y reintenta 1 vez.
+- Router:
+  - Rutas protegidas con `<ProtectedRoute />` que exige `user` y valida permiso por módulo.
+  - Tras login, redirigir a `/<defaultModule.path>`.
+- Sidebar:
+  - Se construye con `menu` de `/me` o `/menu`.
+  - Iconos por `modulo_icono` (usa `lucide-react`; mapea string a ícono).
+  - Soporta anidación padre/hijo por `modulo_padre_id`.
+- UI:
+  - Librería: MUI o unstyled + tailwind (elige una; preferible MUI para rapidez). 
+  - Formularios con `react-hook-form` + `zodResolver`.
+
+ENDPOINTS A IMPLEMENTAR (API)
+- POST /auth/login
+- POST /auth/refresh
+- POST /auth/logout
+- GET  /me           (requireAuth)
+- GET  /menu         (requireAuth)
+- GET  /usuarios/check-username
+- POST /usuarios     (requireAuth + requirePermission('Usuarios','ingresar') para ver; usar permiso “crear” si lo defines)
+
+CONSULTAS SQL (orientativas para repos, transpón a Drizzle)
+- DEFAULT MODULE por usuario (rol activo):
+  SELECT m.modulo_id, m.modulo_descripcion, m.modulo_ruta, m.modulo_icono
+  FROM modulos m
+  JOIN rol_modulo rm   ON rm.modulo_id = m.modulo_id AND rm.modulo_default = true AND rm.rol_modulo_habilitado = true
+  JOIN rol_usuario ru  ON ru.rol = rm.rol_id AND ru.rol_usuario_habilitado = true
+  WHERE ru.usuario = $1
+  LIMIT 1;
+
+- MENÚ y permisos:
+  SELECT m.*, rm.modulo_default,
+         COALESCE(json_agg(json_build_object(
+            'permiso_id', p.permiso_id,
+            'permiso_descripcion', p.permiso_descripcion,
+            'habilitado', rmp.rol_modulo_permiso_habilita
+         ) FILTER (WHERE p.permiso_id IS NOT NULL)), '[]') AS permisos
+  FROM modulos m
+  JOIN rol_modulo rm  ON rm.modulo_id = m.modulo_id AND rm.rol_modulo_habilitado = true
+  JOIN rol_usuario ru ON ru.rol = rm.rol_id AND ru.rol_usuario_habilitado = true
+  LEFT JOIN rol_modulo_permiso rmp ON rmp.modulo_id = m.modulo_id AND rmp.rol_id = ru.rol
+  LEFT JOIN permisos p ON p.permiso_id = rmp.permiso_id
+  WHERE ru.usuario = $1 AND m.modulo_habilitado = true
+  GROUP BY m.modulo_id, rm.modulo_default
+  ORDER BY m.modulo_descripcion;
+
+- SESIONES: actualizar actividad al tocar endpoints protegidos si han pasado ≥60s:
+  UPDATE sesiones SET last_activity = now() WHERE sesion_id = $1;
+
+MIDDLEWARES CLAVE
+- `requireAuth`: lee Authorization Bearer, verifica firma HS512, desencripta JWE, comprueba que la sesión no está revocada y que no superó inactividad/absoluta (usando `sesiones` y `politicas_sesion`). Si expira por inactividad, responde 401 con código `SESSION_INACTIVE`.
+- `requirePermission(moduloSlug, permiso)`:
+  - Verifica que en `req.auth.permissions` exista el permiso habilitado para ese módulo.
+- `errorHandler`: respuestas JSON uniformes { ok:false, code, message }.
+
+SCRIPTS Y TAREAS
+- package.json (root): 
+  - "dev": "concurrently -k \"pnpm -C apps/api dev\" \"pnpm -C apps/web dev\""
+- apps/api/package.json:
+  - "dev": "tsx watch src/index.ts"
+  - "db:introspect": "drizzle-kit introspect:pg --out src/db/drizzle --schema public"
+- apps/web/package.json:
+  - "dev": "vite"
+
+TESTS BÁSICOS
+- api: jest para servicio de tokens y servicio de sesión.
+- web: vitest para buildUsername() y ProtectedRoute.
+
+ENTREGABLES
+- Código listo para `pnpm i && pnpm dev`.
+- Documenta en README:
+  - cómo configurar .env,
+  - flujo de login/refresh/logout,
+  - cómo añadir un nuevo módulo (back: registro en `modulos` y relación con rol; front: auto-aparece en el menú porque viene de /menu).
+
+
