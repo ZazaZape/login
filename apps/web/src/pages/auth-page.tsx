@@ -1,8 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema, LoginDto } from "@shared/index";
+import { z } from "zod";
+
+// Login schema and type definitions
+const loginSchema = z.object({
+  usuario: z.string().min(1, "Usuario es requerido"),
+  password: z.string().min(1, "Contraseña es requerida"),
+});
+
+type LoginDto = z.infer<typeof loginSchema>;
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
