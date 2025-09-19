@@ -70,3 +70,16 @@ export async function createUser(req: AuthRequest, res: Response, next: NextFunc
     next(error);
   }
 }
+
+export async function getAllUsers(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const users = await userRepo.findAllUsers();
+    
+    res.json({
+      ok: true,
+      data: users,
+    });
+  } catch (error) {
+    next(error);
+  }
+}

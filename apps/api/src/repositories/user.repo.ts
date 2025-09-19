@@ -123,4 +123,54 @@ export class UserRepository {
 
     return result.length;
   }
+
+  async findAllUsers() {
+    const result = await db
+      .select({
+        usuario_id: usuarios.usuario_id,
+        usuario: usuarios.usuario,
+        individuo: usuarios.individuo,
+        usuario_habilitado: usuarios.usuario_habilitado,
+        politica_sesion_id: usuarios.politica_sesion_id,
+        rol_id: roles.rol_id,
+        rol_descripcion: roles.rol_descripcion,
+      })
+      .from(usuarios)
+      .leftJoin(rol_usuario, and(
+        eq(usuarios.usuario_id, rol_usuario.usuario),
+        eq(rol_usuario.rol_usuario_habilitado, true)
+      ))
+      .leftJoin(roles, and(
+        eq(rol_usuario.rol, roles.rol_id),
+        eq(roles.rol_habilitado, true)
+      ))
+      .orderBy(usuarios.usuario);
+
+    // Group by user and collect roles
+    const userMap = new Map();
+    
+    result.forEach(row => {
+      const userId = row.usuario_id;
+      
+      if (!userMap.has(userId)) {
+        userMap.set(userId, {
+          usuario_id: row.usuario_id,
+          usuario: row.usuario,
+          individuo: row.individuo,
+          usuario_habilitado: row.usuario_habilitado,
+          politica_sesion_id: row.politica_sesion_id,
+          roles: [],
+        });
+      }
+      
+      if (row.rol_id) {
+        userMap.get(userId).roles.push({
+          rol_id: row.rol_id,
+          descripcion: row.rol_descripcion,
+        });
+      }
+    });
+
+    return Array.from(userMap.values());
+  }
 }

@@ -5,6 +5,11 @@ import { requirePermission } from "../middlewares/requirePermission.js";
 
 const router = Router();
 
+router.get("/", 
+  requireAuth, 
+  requirePermission("usuarios", "ver"),
+  usersController.getAllUsers
+);
 router.get("/check-username", usersController.checkUsername);
 router.post("/", 
   requireAuth, 
