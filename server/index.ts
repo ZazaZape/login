@@ -25,8 +25,15 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      
+      // SECURITY: Never log response bodies for auth endpoints to prevent token leakage
+      const isAuthEndpoint = path.startsWith("/api/auth");
+      const isSensitiveEndpoint = isAuthEndpoint || path.includes("password") || path.includes("token");
+      
+      if (capturedJsonResponse && !isSensitiveEndpoint) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      } else if (isSensitiveEndpoint) {
+        logLine += ` :: [REDACTED - sensitive data]`;
       }
 
       if (logLine.length > 80) {

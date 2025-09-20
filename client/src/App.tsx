@@ -11,7 +11,7 @@ import UsuariosPage from "./pages/usuarios-page.tsx";
 function Router() {
   return (
     <Switch>
-      <Route path="/auth" component={AuthPage} />
+      <Route path="/login" component={AuthPage} />
       <Route path="/usuarios" component={UsuariosPage} />
       <Route path="/" component={HomePage} />
       <Route component={NotFound} />
