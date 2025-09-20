@@ -54,7 +54,14 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
 
 export async function refresh(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const refreshToken = req.cookies.refresh_token;
+    // Debug logging
+    console.log('[DEBUG] Refresh request headers:', req.headers.cookie);
+    console.log('[DEBUG] req.cookies object:', req.cookies);
+    console.log('[DEBUG] Available cookie keys:', req.cookies ? Object.keys(req.cookies) : 'undefined');
+    
+    const refreshToken = req.cookies?.refresh_token;
+    console.log('[DEBUG] Extracted refresh_token:', refreshToken ? 'present' : 'missing');
+    
     if (!refreshToken) {
       return res.status(401).json({
         ok: false,

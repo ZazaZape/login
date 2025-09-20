@@ -40,6 +40,13 @@ export function createApp() {
 
   // Cookie parsing
   app.use(cookieParser());
+  
+  // Debug middleware to check if cookies are being parsed
+  app.use((req, res, next) => {
+    console.log('[DEBUG] Middleware - req.cookies:', req.cookies);
+    console.log('[DEBUG] Middleware - req.headers.cookie:', req.headers.cookie);
+    next();
+  });
 
   // Logging
   if (env.NODE_ENV === "development") {
