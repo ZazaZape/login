@@ -1,7 +1,6 @@
-import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import React from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "../../hooks/use-auth";
 import { 
   Network, 
   Gauge, 
@@ -13,7 +12,11 @@ import {
   LogOut,
   User
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
+// Simple utility function for className concatenation
+function cn(...classes: (string | undefined | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
 
 const iconMap = {
   "tachometer-alt": Gauge,
@@ -27,7 +30,7 @@ const iconMap = {
 
 export default function Sidebar() {
   const { authData, logoutMutation } = useAuth();
-  const location = useLocation();
+  const [location] = useLocation();
 
   const menuItems = authData?.menu || [];
   const user = authData?.user;
@@ -38,7 +41,7 @@ export default function Sidebar() {
   };
 
   const isActiveRoute = (path: string) => {
-    return location.pathname === path;
+    return location === path;
   };
 
   return (
@@ -111,9 +114,7 @@ export default function Sidebar() {
               {user?.rol_activo?.descripcion || "Sin rol"}
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => logoutMutation.mutate()}
             disabled={logoutMutation.isPending}
             className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
@@ -121,7 +122,7 @@ export default function Sidebar() {
             data-testid="button-logout"
           >
             <LogOut className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       </div>
     </div>
