@@ -8,7 +8,7 @@
     "noImplicitAny": true,
     "strictNullChecks": true,
     "lib": ["esnext", "dom", "dom.iterable"],
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
@@ -22,14 +22,6 @@
       "@auth/*": ["./packages/auth/src/*"]
     }
   },
-  "include": [
-    "apps/*/src/**/*",
-    "packages/*/src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "build",
-    "dist",
-    "**/*.test.ts"
-  ]
+  "include": ["apps/*/src/**/*", "packages/*/src/**/*"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"]
 }

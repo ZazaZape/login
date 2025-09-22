@@ -8,7 +8,7 @@ import { Shield, Network } from "lucide-react";
 export default function AuthPage() {
   const [credentials, setCredentials] = useState({
     usuario: "",
-    password: ""
+    password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,12 +34,12 @@ export default function AuthPage() {
         if (data.data.accessToken) {
           localStorage.setItem("accessToken", data.data.accessToken);
         }
-        
+
         // Store user data
         if (data.data.user) {
           localStorage.setItem("user", JSON.stringify(data.data.user));
         }
-        
+
         // Redirect to homepage on success
         window.location.href = "/";
       } else {
@@ -53,17 +53,22 @@ export default function AuthPage() {
   };
 
   const handleChange = (field: string, value: string) => {
-    setCredentials(prev => ({ ...prev, [field]: value }));
+    setCredentials((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100" data-testid="auth-page">
+    <div
+      className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100"
+      data-testid="auth-page"
+    >
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center">
             <Network className="h-12 w-12 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl font-bold">Connectiva Hermes</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Connectiva Hermes
+          </CardTitle>
           <p className="text-gray-600">Sistema de Autenticación</p>
         </CardHeader>
         <CardContent>
@@ -80,7 +85,7 @@ export default function AuthPage() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
               <Input
@@ -95,33 +100,23 @@ export default function AuthPage() {
             </div>
 
             {error && (
-              <div className="text-red-600 text-sm bg-red-50 p-2 rounded" data-testid="error-message">
+              <div
+                className="text-red-600 text-sm bg-red-50 p-2 rounded"
+                data-testid="error-message"
+              >
                 {error}
               </div>
             )}
 
-            <Button 
-              type="submit" 
-              className="w-full" 
+            <Button
+              type="submit"
+              className="w-full"
               disabled={isLoading}
               data-testid="button-login"
             >
               {isLoading ? "Autenticando..." : "Iniciar Sesión"}
             </Button>
           </form>
-
-          <div className="mt-6 text-center">
-            <div className="text-sm text-gray-500">
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Shield className="h-4 w-4" />
-                <span>Credenciales de prueba:</span>
-              </div>
-              <div className="text-xs">
-                <p><strong>admin</strong> / admin123</p>
-                <p><strong>wposada407</strong> / test123</p>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
