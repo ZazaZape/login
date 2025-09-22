@@ -60,36 +60,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     queryFn: async () => {
       const token = localStorage.getItem('accessToken');
       const user = localStorage.getItem('user');
+      const menu = localStorage.getItem('menu');
+      const defaultModule = localStorage.getItem('defaultModule');
+      const roleId = localStorage.getItem('roleId');
       
       if (!token || !user) {
         return null;
       }
 
       try {
-        // Verify token with backend if needed
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        // Parse localStorage data
+        const userData = JSON.parse(user);
+        const menuData = menu ? JSON.parse(menu) : [];
+        const defaultModuleData = defaultModule ? JSON.parse(defaultModule) : null;
+        const roleIdData = roleId ? parseInt(roleId, 10) : userData.rol_activo?.rol_id || 1;
 
-        if (!response.ok) {
-          // Token is invalid, clear storage
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('user');
-          return null;
-        }
-
-        const userData = await response.json();
         return {
           accessToken: token,
-          user: userData.user,
-          roleId: userData.roleId,
-          defaultModule: userData.defaultModule,
-          menu: userData.menu || [],
+          user: userData,
+          roleId: roleIdData,
+          defaultModule: defaultModuleData,
+          menu: menuData,
         } as AuthData;
       } catch (error) {
-        console.warn('Auth verification failed:', error);
+        console.warn('Failed to parse auth data from localStorage:', error);
+        // Clear corrupted data
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('menu');
+        localStorage.removeItem('defaultModule');
+        localStorage.removeItem('roleId');
         return null;
       }
     },
@@ -119,6 +119,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear client-side storage
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
+      localStorage.removeItem('menu');
+      localStorage.removeItem('defaultModule');
+      localStorage.removeItem('roleId');
       
       // Clear React Query cache
       queryClient.clear();
@@ -130,6 +133,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Even if logout fails on server, clear client state
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
+      localStorage.removeItem('menu');
+      localStorage.removeItem('defaultModule');
+      localStorage.removeItem('roleId');
       
       // Clear React Query cache
       queryClient.clear();

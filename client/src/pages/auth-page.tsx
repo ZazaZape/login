@@ -40,6 +40,21 @@ export default function AuthPage() {
           localStorage.setItem("user", JSON.stringify(data.data.user));
         }
 
+        // Store menu data for sidebar
+        if (data.data.menu) {
+          localStorage.setItem("menu", JSON.stringify(data.data.menu));
+        }
+
+        // Store default module
+        if (data.data.defaultModule) {
+          localStorage.setItem("defaultModule", JSON.stringify(data.data.defaultModule));
+        }
+
+        // Store role ID
+        if (data.data.roleId) {
+          localStorage.setItem("roleId", data.data.roleId.toString());
+        }
+
         // Redirect to default module if available, otherwise to dashboard
         const defaultModulePath = data.data.defaultModule?.path;
         if (defaultModulePath) {
