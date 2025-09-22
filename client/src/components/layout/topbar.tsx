@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import { useAuth } from "../../hooks/use-auth";
+import { Button } from "../ui/button";
 import { Moon, Sun, Shield, User, ChevronDown } from "lucide-react";
 
 export default function Topbar() {
   const { authData } = useAuth();
-  const location = useLocation();
+  const [location] = useLocation();
   const [isDark, setIsDark] = useState(false);
 
   const getCurrentPageTitle = () => {
-    const path = location.pathname;
+    const path = location;
     if (path === "/") return "Dashboard";
     if (path === "/usuarios") return "Gestión de Usuarios";
     
@@ -20,7 +20,7 @@ export default function Topbar() {
   };
 
   const getBreadcrumbs = () => {
-    const path = location.pathname;
+    const path = location;
     if (path === "/") return null;
     
     return (
