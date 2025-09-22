@@ -1,62 +1,28 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Shield, Database, Clock, LogOut } from "lucide-react";
+import { Users, Shield, Database, Clock } from "lucide-react";
+import DashboardLayout from "@/components/layout/dashboard-layout";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function HomePage() {
-  const handleLogout = async () => {
-    try {
-      // Call logout API to revoke server-side session
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-      }
-    } catch (error) {
-      console.warn("Logout API call failed:", error);
-    } finally {
-      // Clear client-side storage
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
-      
-      // Redirect to auth page
-      window.location.href = "/auth";
-    }
-  };
-
+  const { authData } = useAuth();
+  
   return (
-    <div className="min-h-screen bg-gray-50" data-testid="home-page">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600">Bienvenido al sistema Connectiva Hermes</p>
-            </div>
-            <Button 
-              onClick={handleLogout} 
-              variant="outline"
-              data-testid="button-logout"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Cerrar Sesión
-            </Button>
-          </div>
+    <DashboardLayout>
+      <div className="p-6" data-testid="home-page">
+        {/* Welcome Message */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            ¡Bienvenido, {authData?.user?.usuario}!
+          </h1>
+          <p className="text-muted-foreground">
+            Sistema Connectiva Hermes - {authData?.user?.rol_activo?.descripcion}
+          </p>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {/* Success Message */}
-        <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4" data-testid="success-message">
+        <div className="mb-6 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4" data-testid="success-message">
           <div className="flex items-center">
-            <Shield className="h-5 w-5 text-green-600 mr-2" />
-            <p className="text-green-800">
+            <Shield className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
+            <p className="text-green-800 dark:text-green-200">
               <strong>¡Autenticación exitosa!</strong> Has iniciado sesión correctamente.
             </p>
           </div>
@@ -146,7 +112,7 @@ export default function HomePage() {
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
