@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Shield, Network } from "lucide-react";
 
 export default function AuthPage() {
@@ -40,8 +40,15 @@ export default function AuthPage() {
           localStorage.setItem("user", JSON.stringify(data.data.user));
         }
 
-        // Redirect to homepage on success
-        window.location.href = "/";
+        // Redirect to default module if available, otherwise to dashboard
+        const defaultModulePath = data.data.defaultModule?.path;
+        if (defaultModulePath) {
+          console.log(`Redirigiendo al módulo por defecto: ${defaultModulePath}`);
+          window.location.href = defaultModulePath;
+        } else {
+          console.log("No hay módulo por defecto, redirigiendo al dashboard");
+          window.location.href = "/";
+        }
       } else {
         setError(data.message || "Error de autenticación");
       }

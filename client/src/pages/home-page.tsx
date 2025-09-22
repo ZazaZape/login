@@ -1,7 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Users, Shield, Database, Clock } from "lucide-react";
-import DashboardLayout from "@/components/layout/dashboard-layout";
-import { useAuth } from "@/hooks/use-auth";
+import DashboardLayout from "../components/layout/dashboard-layout";
+import { useAuth } from "../hooks/use-auth";
 
 export default function HomePage() {
   const { authData } = useAuth();
@@ -18,6 +19,7 @@ export default function HomePage() {
             Sistema Connectiva Hermes - {authData?.user?.rol_activo?.descripcion}
           </p>
         </div>
+
         {/* Success Message */}
         <div className="mb-6 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4" data-testid="success-message">
           <div className="flex items-center">
