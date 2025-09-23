@@ -55,15 +55,9 @@ export default function AuthPage() {
           localStorage.setItem("roleId", data.data.roleId.toString());
         }
 
-        // Redirect to default module if available, otherwise to dashboard
-        const defaultModulePath = data.data.defaultModule?.path;
-        if (defaultModulePath) {
-          console.log(`Redirigiendo al módulo por defecto: ${defaultModulePath}`);
-          window.location.href = defaultModulePath;
-        } else {
-          console.log("No hay módulo por defecto, redirigiendo al dashboard");
-          window.location.href = "/";
-        }
+        // Always redirect to home page after login, which will handle default module redirect
+        console.log("Login exitoso, redirigiendo a home page");
+        window.location.href = "/";
       } else {
         setError(data.message || "Error de autenticación");
       }

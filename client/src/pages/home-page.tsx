@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Users, Shield, Database, Clock } from "lucide-react";
 import DashboardLayout from "../components/layout/dashboard-layout";
@@ -6,6 +7,15 @@ import { useAuth } from "../hooks/use-auth";
 
 export default function HomePage() {
   const { authData } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Redirect to default module if available
+  useEffect(() => {
+    if (authData?.defaultModule?.path) {
+      console.log(`Redirigiendo al módulo por defecto: ${authData.defaultModule.path}`);
+      setLocation(authData.defaultModule.path);
+    }
+  }, [authData, setLocation]);
   
   return (
     <DashboardLayout>
