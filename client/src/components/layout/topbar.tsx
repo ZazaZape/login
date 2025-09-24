@@ -1,11 +1,12 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "../../hooks/use-auth";
 import { Button } from "../ui/button";
-import { Moon, Sun, Shield, User, ChevronDown } from "lucide-react";
+import { Switch } from "../ui/switch";
+import { Moon, Sun, Shield, User, ChevronDown, LogOut } from "lucide-react";
 
 export default function Topbar() {
-  const { authData } = useAuth();
+  const { authData, logoutMutation } = useAuth();
   const [location] = useLocation();
   const [isDark, setIsDark] = useState(false);
 
@@ -51,38 +52,44 @@ export default function Topbar() {
       </div>
       
       <div className="flex items-center space-x-4">
-        {/* Session Info */}
-        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-          <Shield className="w-4 h-4" />
-          <span>Sesión activa</span>
+        {/* Theme Toggle */}
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={isDark}
+            onCheckedChange={toggleTheme}
+            className="data-[state=checked]:bg-primary"
+            data-testid="switch-theme-toggle"
+          />
+          {isDark ? (
+            <Moon className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <Sun className="w-4 h-4 text-muted-foreground" />
+          )}
         </div>
         
-        {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleTheme}
-          className="text-muted-foreground hover:text-foreground"
-          title="Cambiar tema"
-          data-testid="button-theme-toggle"
-        >
-          {isDark ? (
-            <Sun className="w-4 h-4" />
-          ) : (
-            <Moon className="w-4 h-4" />
-          )}
-        </Button>
-        
-        {/* User Menu */}
-        <div className="relative">
+        {/* User Info */}
+        <div className="flex items-center space-x-3 bg-muted/50 px-3 py-2 rounded-lg">
+          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+            <User className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <p className="text-sm font-medium text-foreground truncate" data-testid="user-name">
+              {authData?.user?.usuario || "Usuario"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate" data-testid="user-role">
+              {authData?.user?.rol_activo?.descripcion || "Sin rol"}
+            </p>
+          </div>
           <Button
             variant="ghost"
             size="sm"
-            className="flex items-center space-x-2 text-muted-foreground hover:text-foreground"
-            data-testid="button-user-menu"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
+            title="Cerrar Sesión"
+            data-testid="button-logout"
           >
-            <User className="w-4 h-4" />
-            <ChevronDown className="w-3 h-3" />
+            <LogOut className="w-4 h-4" />
           </Button>
         </div>
       </div>

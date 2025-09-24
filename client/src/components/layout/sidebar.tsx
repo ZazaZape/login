@@ -57,31 +57,6 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* User Info - Moved to top */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate" data-testid="user-name">
-              {user?.usuario || "Usuario"}
-            </p>
-            <p className="text-xs text-muted-foreground truncate" data-testid="user-role">
-              {user?.rol_activo?.descripcion || "Sin rol"}
-            </p>
-          </div>
-          <button
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
-            title="Cerrar Sesión"
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
 
       {/* Navigation Menu */}
       <nav className="flex-1 overflow-y-auto py-4" data-testid="navigation-menu">
