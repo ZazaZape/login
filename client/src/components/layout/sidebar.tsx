@@ -45,7 +45,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-card border-r border-border flex flex-col shadow-sm" data-testid="sidebar">
+    <div className="w-64 h-screen bg-card border-r border-border flex flex-col shadow-sm" data-testid="sidebar">
       {/* Logo Header */}
       <div className="p-6 border-b border-border">
         <div className="flex items-center space-x-3">
@@ -54,6 +54,32 @@ export default function Sidebar() {
             <h1 className="font-bold text-lg text-foreground">Connectiva</h1>
             <p className="text-xs text-muted-foreground">Hermes v2.0</p>
           </div>
+        </div>
+      </div>
+
+      {/* User Info - Moved to top */}
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center space-x-3">
+          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+            <User className="w-4 h-4 text-primary-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate" data-testid="user-name">
+              {user?.usuario || "Usuario"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate" data-testid="user-role">
+              {user?.rol_activo?.descripcion || "Sin rol"}
+            </p>
+          </div>
+          <button
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
+            title="Cerrar Sesión"
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -100,31 +126,6 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* User Info Footer */}
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate" data-testid="user-name">
-              {user?.usuario || "Usuario"}
-            </p>
-            <p className="text-xs text-muted-foreground truncate" data-testid="user-role">
-              {user?.rol_activo?.descripcion || "Sin rol"}
-            </p>
-          </div>
-          <button
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            className="text-muted-foreground hover:text-foreground p-1 rounded transition-colors"
-            title="Cerrar Sesión"
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
