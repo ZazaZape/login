@@ -1,24 +1,28 @@
 import React, { useState, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import DashboardLayout from "../components/layout/dashboard-layout";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
+import { Switch } from "../components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Search, Plus, Edit, Lock, MoreHorizontal, Users } from "lucide-react";
 import CreateUserModal from "../components/usuarios/create-user-modal";
+import { apiRequest } from "../lib/queryClient";
+
+interface Role {
+  rol_id: number;
+  descripcion: string;
+}
 
 interface User {
   usuario_id: number;
   usuario: string;
-  email?: string;
+  individuo?: string;
   usuario_habilitado: boolean;
-  fecha_creacion?: string;
-  rol_activo?: {
-    descripcion: string;
-  };
-  otp_configurado?: boolean;
+  politica_sesion_id?: number;
+  roles: Role[];
 }
 
 interface ApiResponse {
@@ -46,10 +50,33 @@ export default function UsuariosPage() {
     const query = searchQuery.toLowerCase().trim();
     return users.filter((user: User) => 
       user.usuario.toLowerCase().includes(query) ||
-      user.email?.toLowerCase().includes(query) ||
-      user.rol_activo?.descripcion.toLowerCase().includes(query)
+      user.roles.some(role => role.descripcion.toLowerCase().includes(query))
     );
   }, [users, searchQuery]);
+
+  // Mutation to toggle user status
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ userId, enabled }: { userId: number; enabled: boolean }) => {
+      return apiRequest(`/api/usuarios/${userId}/toggle-status`, {
+        method: "PUT",
+        body: JSON.stringify({ enabled }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    },
+    onSuccess: () => {
+      // Invalidate and refetch users
+      queryClient.invalidateQueries({ queryKey: ["/api/usuarios"] });
+    },
+    onError: (error) => {
+      console.error("Error updating user status:", error);
+    },
+  });
+
+  const handleStatusToggle = (userId: number, newStatus: boolean) => {
+    toggleStatusMutation.mutate({ userId, enabled: newStatus });
+  };
 
   return (
     <DashboardLayout>
@@ -152,38 +179,43 @@ export default function UsuariosPage() {
                         <TableCell>
                           <div>
                             <div className="font-medium">{user.usuario}</div>
-                            {user.email && (
-                              <div className="text-sm text-muted-foreground">{user.email}</div>
+                            {user.individuo && (
+                              <div className="text-sm text-muted-foreground">ID: {user.individuo}</div>
                             )}
                           </div>
                         </TableCell>
                         <TableCell>
                           <span className="text-sm">
-                            {user.rol_activo?.descripcion || "Sin rol asignado"}
+                            {user.roles && user.roles.length > 0 
+                              ? user.roles.map(role => role.descripcion).join(", ")
+                              : "Sin rol asignado"
+                            }
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={user.usuario_habilitado ? "default" : "secondary"}
-                            className={user.usuario_habilitado ? "bg-blue-600 hover:bg-blue-700" : ""}
-                          >
-                            {user.usuario_habilitado ? "Activo" : "Inactivo"}
-                          </Badge>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={user.usuario_habilitado}
+                              onCheckedChange={(checked) => handleStatusToggle(user.usuario_id, checked)}
+                              disabled={toggleStatusMutation.isPending}
+                              data-testid={`switch-status-${user.usuario_id}`}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                              {user.usuario_habilitado ? "Activo" : "Inactivo"}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge 
-                            variant={user.otp_configurado ? "default" : "outline"}
-                            className={user.otp_configurado ? "bg-green-600 hover:bg-green-700" : ""}
+                            variant="outline"
+                            className=""
                           >
-                            {user.otp_configurado ? "Configurado" : "Pendiente"}
+                            Pendiente
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <span className="text-sm text-muted-foreground">
-                            {user.fecha_creacion 
-                              ? new Date(user.fecha_creacion).toLocaleDateString('es-ES')
-                              : "No disponible"
-                            }
+                            No disponible
                           </span>
                         </TableCell>
                         <TableCell className="text-right">

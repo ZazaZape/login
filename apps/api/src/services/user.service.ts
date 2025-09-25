@@ -1,9 +1,13 @@
 import { UserRepository } from "../repositories/user.repo.js";
+import { SessionRepository } from "../repositories/session.repo.js";
 import { hashPassword } from "../utils/password.js";
 import type { CreateUserDto } from "@shared/index";
 
 export class UserService {
-  constructor(private userRepo: UserRepository) {}
+  constructor(
+    private userRepo: UserRepository,
+    private sessionRepo: SessionRepository
+  ) {}
 
   async checkUsernameAvailability(username: string): Promise<{ available: boolean }> {
     const available = await this.userRepo.checkUsernameAvailability(username);
@@ -71,6 +75,12 @@ export class UserService {
       throw new Error("Usuario no encontrado");
     }
 
+    // Update user status
     await this.userRepo.updateUserStatus(userId, enabled);
+    
+    // If disabling user, revoke all active sessions for security
+    if (!enabled) {
+      await this.sessionRepo.revokeAllUserSessions(userId);
+    }
   }
 }

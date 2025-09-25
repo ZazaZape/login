@@ -1,6 +1,7 @@
 import type { Response, NextFunction } from "express";
 import { UserService } from "../services/user.service.js";
 import { UserRepository } from "../repositories/user.repo.js";
+import { SessionRepository } from "../repositories/session.repo.js";
 import { checkUsernameSchema, createUserSchema } from "@shared/index";
 import type { AuthRequest } from "../types/auth.js";
 import { z } from "zod";
@@ -10,7 +11,8 @@ const updateUserStatusSchema = z.object({
 });
 
 const userRepo = new UserRepository();
-const userService = new UserService(userRepo);
+const sessionRepo = new SessionRepository();
+const userService = new UserService(userRepo, sessionRepo);
 
 export async function checkUsername(req: AuthRequest, res: Response, next: NextFunction) {
   try {
