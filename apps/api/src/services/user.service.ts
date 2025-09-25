@@ -64,4 +64,13 @@ export class UserService {
       .replace(/[\u0300-\u036f]/g, '') // Remove accents
       .replace(/[^a-z0-9]/g, ''); // Remove non-alphanumeric characters
   }
+
+  async updateUserStatus(userId: number, enabled: boolean): Promise<void> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    await this.userRepo.updateUserStatus(userId, enabled);
+  }
 }

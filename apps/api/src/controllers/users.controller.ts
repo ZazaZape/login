@@ -3,6 +3,11 @@ import { UserService } from "../services/user.service.js";
 import { UserRepository } from "../repositories/user.repo.js";
 import { checkUsernameSchema, createUserSchema } from "@shared/index";
 import type { AuthRequest } from "../types/auth.js";
+import { z } from "zod";
+
+const updateUserStatusSchema = z.object({
+  enabled: z.boolean(),
+});
 
 const userRepo = new UserRepository();
 const userService = new UserService(userRepo);
@@ -80,6 +85,47 @@ export async function getAllUsers(req: AuthRequest, res: Response, next: NextFun
       data: users,
     });
   } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateUserStatus(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        ok: false,
+        code: "INVALID_USER_ID",
+        message: "ID de usuario inválido",
+      });
+    }
+
+    const validation = updateUserStatusSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        ok: false,
+        code: "VALIDATION_ERROR",
+        message: "Datos inválidos",
+        errors: validation.error.errors,
+      });
+    }
+
+    const { enabled } = validation.data;
+    
+    await userService.updateUserStatus(userId, enabled);
+
+    res.json({
+      ok: true,
+      message: "Estado del usuario actualizado exitosamente",
+    });
+  } catch (error: any) {
+    if (error?.message === "Usuario no encontrado") {
+      return res.status(404).json({
+        ok: false,
+        code: "USER_NOT_FOUND",
+        message: error?.message || "Usuario no encontrado",
+      });
+    }
     next(error);
   }
 }

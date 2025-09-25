@@ -16,5 +16,10 @@ router.post("/",
   requirePermission("usuarios", "crear"),
   usersController.createUser
 );
+router.put("/:id/toggle-status", 
+  requireAuth, 
+  requirePermission("usuarios", "editar"),
+  usersController.updateUserStatus
+);
 
 export default router;

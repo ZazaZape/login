@@ -173,4 +173,14 @@ export class UserRepository {
 
     return Array.from(userMap.values());
   }
+
+  async updateUserStatus(userId: number, enabled: boolean) {
+    const result = await db
+      .update(usuarios)
+      .set({ usuario_habilitado: enabled })
+      .where(eq(usuarios.usuario_id, userId))
+      .returning();
+
+    return result[0] || null;
+  }
 }
